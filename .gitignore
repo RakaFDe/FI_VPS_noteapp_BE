@@ -1,0 +1,54 @@
+# =========================
+# ENV & SECRETS
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# DEPENDENCIES & BUILD
+# =========================
+node_modules/
+dist/
+build/
+
+# =========================
+# LOGS
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# COVERAGE
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# OS & EDITOR
+# =========================
+.DS_Store
+Thumbs.db
+
+.vscode/
+!.vscode/extensions.json
+
+.idea/
+
+# =========================
+# DOCKER LOCAL OVERRIDE
+# =========================
+docker-compose.override.yml
+
+# =========================
+# DRIZZLE
+# =========================
+drizzle/meta/
+
+# =========================
+# DB FILES (OPTIONAL)
+# =========================
+*.sqlite
+*.db

@@ -1,0 +1,116 @@
+NODE_ENV=production
+PORT=8080
+DATABASE_URL=postgres://user:pass@db:5432/finote
+SESSION_SECRET=super-secret-value
+DB_POOL_MAX=5
+CORS_ORIGIN=http://localhost:5173
+
+
+wajib inject
+NODE_ENV=production
+PORT=8080
+DATABASE_URL=postgresql://user:pass@host:5432/db
+SESSION_SECRET=supersecret
+SESSION_NAME=noteapp.sid
+CORS_ORIGIN=https://frontend.domain
+DB_POOL_MAX=5
+
+docker network create finote-net
+
+docker build -t noteapp-backend ./backend
+
+
+docker run -p 8080:8080 \
+  -e NODE_ENV=development \
+  -e PORT=8080 \
+  -e DATABASE_URL=postgresql://postgres:pass@host.docker.internal:5432/noteapp \
+  -e SESSION_SECRET=devsecret \
+  noteapp-backend
+
+
+docker run -p 8080:8080 \
+  -e PORT=8080 \
+  -e DATABASE_URL=postgres://user:pass@db:5432/finote \
+  -e SESSION_SECRET=prod-secret \
+  finote-backend
+
+
+npm install
+npm install typescript
+npm install cors
+npm install -D @types/cors
+npm install bcrypt
+npm install -D @types/bcrypt
+npm install prom-client
+
+
+====================
+docker network create finote-net
+
+docker run -d \
+  --name finote-postgres \
+  --network finote-net \
+  -e POSTGRES_DB=finote \
+  -e POSTGRES_USER=finote_user \
+  -e POSTGRES_PASSWORD=finote_password \
+  -p 5432:5432 \
+  postgres:16
+
+docker run -d --name finote-postgres --network finote-net -e POSTGRES_DB=finote -e POSTGRES_USER=finote_user -e POSTGRES_PASSWORD=finote_password -p 5432:5432 postgres:16
+
+----------------------------------
+================================================================================================================
+================================================================================================================
+================================================================================================================
+
+dev
+npm run build
+
+docker build -t note-backend-dev .  
+docker build -t finote-backend .
+
+docker run -d \
+  --name finote-backend \
+  --network finote-net \
+  -p 3000:3000 \
+  -e NODE_ENV=development \
+  -e PORT=3000 \
+  -e SESSION_SECRET=dev-secret \
+  -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
+  finote-backend
+
+docker run -d --name finote-backend --network finote-net -p 3000:3000 -e NODE_ENV=development -e PORT=3000 -e SESSION_SECRET=dev-secret -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote finote-backend
+
+docker run -it --rm -p 3000:3000 -e NODE_ENV=development -e PORT=3000 -e DATABASE_URL=postgres://postgres:postgres@localhost:5432/finote -e SESSION_SECRET=devsecret finote-backend
+
+----------------------
+prod
+
+docker run -d \
+  --name finote-backend \
+  --network finote-net \
+  -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e PORT=3000 \
+  -e SESSION_SECRET=super-secret-production \
+  -e SESSION_NAME=finote.sid \
+  -e CORS_ORIGIN=https://finote.domainmu.com \
+  -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
+  finote-backend
+
+
+docker run -d --name finote-backend -p 3000:3000 -e NODE_ENV=production -e PORT=3000 -e DATABASE_URL=postgres://finote:strongpass@db:5432/finote -e SESSION_SECRET=super-secret-production -e SESSION_NAME=finote.sid -e CORS_ORIGIN=https://finote.domainmu.com finote-backend
+
+
+=====================================
+Error: Unknown authentication strategy "local"
+
+Artinya Passport dipanggil dengan strategy "local", tetapi strategy tersebut BELUM pernah didaftarkan.
+passport.authenticate("local") dipanggil
+❌ tapi passport.use(new LocalStrategy(...)) belum ada / tidak pernah di-load
+
+==================================
+Testing metrics
+curl -i http://localhost:3000/healthz
+curl -i http://localhost:3000/readyz
+curl http://localhost:3000/metrics

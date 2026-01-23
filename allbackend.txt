@@ -1,0 +1,607 @@
+tsconfig.json
+
+{
+  "include": ["src/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "incremental": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "strict": true,
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}
+-----------------
+drizzle.config.ts
+
+import { defineConfig } from "drizzle-kit";
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL, ensure the database is provisioned");
+}
+
+export default defineConfig({
+  out: "./migrations",
+  schema: "./shared/schema.ts",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: process.env.DATABASE_URL,
+  },
+});
+-------
+package.json
+
+{
+  "name": "finote-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "NODE_ENV=development tsx src/index.ts",
+    "build": "tsc",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "connect-pg-simple": "^10.0.0",
+    "drizzle-orm": "^0.39.3",
+    "drizzle-zod": "^0.7.0",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.16.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/connect-pg-simple": "^7.0.3",
+    "@types/express": "4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "20.19.27",
+    "@types/passport": "^1.0.16",
+    "@types/passport-local": "^1.0.38",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.20.5",
+    "typescript": "5.6.3"
+  },
+  "overrides": {
+    "drizzle-kit": {
+      "@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
+    }
+  }
+}
+-------
+src/db.ts
+
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import * as schema from "@shared/schema";
+
+const { Pool } = pg;
+
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?",
+  );
+}
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10, // Limit maximal connection to DB to 10 connections
+});
+
+export const db = drizzle(pool, { schema });
+----------
+src/index.ts
+
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { createServer } from "http";
+
+const app = express();
+const httpServer = createServer(app);
+
+declare module "http" {
+  interface IncomingMessage {
+    rawBody: unknown;
+  }
+}
+
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
+app.use(express.urlencoded({ extended: false }));
+
+export function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
+});
+
+(async () => {
+  await registerRoutes(httpServer, app);
+
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    throw err;
+  });
+
+  const port = parseInt(process.env.PORT || "5000", 10);
+  httpServer.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    },
+  );
+})();
+---------
+src/routes.ts
+
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { api } from "@shared/routes";
+import { z } from "zod";
+import session from "express-session";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+const PgSession = connectPgSimple(session);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+async function comparePasswords(supplied: string, stored: string) {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express
+): Promise<Server> {
+  // Auth Setup
+  app.use(
+    session({
+      store: new PgSession({ pool, createTableIfMissing: true }),
+      secret: process.env.SESSION_SECRET || "default_secret",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      },
+    })
+  );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user) return done(null, false, { message: "Incorrect username." });
+        
+        const isValid = await comparePasswords(password, user.password);
+        if (!isValid) return done(null, false, { message: "Incorrect password." });
+        
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+
+  passport.serializeUser((user: any, done) => done(null, user.id));
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  const isAuthenticated = (req: any, res: any, next: any) => {
+    if (req.isAuthenticated()) return next();
+    res.status(401).json({ message: "Unauthorized" });
+  };
+
+  // API Routes
+
+  // Auth Routes
+  app.post(api.auth.register.path, async (req, res) => {
+    try {
+      const input = api.auth.register.input.parse(req.body);
+      const existingUser = await storage.getUserByUsername(input.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await hashPassword(input.password);
+      const user = await storage.createUser({ ...input, password: hashedPassword });
+      
+      req.login(user, (err) => {
+        if (err) throw err;
+        res.status(201).json(user);
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.post(api.auth.login.path, passport.authenticate("local"), (req, res) => {
+    res.json(req.user);
+  });
+
+  app.post(api.auth.logout.path, (req, res) => {
+    req.logout((err) => {
+      if (err) return res.status(500).json({ message: "Logout failed" });
+      res.sendStatus(200);
+    });
+  });
+
+  app.get(api.auth.me.path, (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json(req.user);
+  });
+
+  // Note Routes
+  app.get(api.notes.list.path, isAuthenticated, async (req, res) => {
+    const notes = await storage.getNotes((req.user as any).id);
+    res.json(notes);
+  });
+
+  app.post(api.notes.create.path, isAuthenticated, async (req, res) => {
+    try {
+      const input = api.notes.create.input.parse(req.body);
+      const note = await storage.createNote((req.user as any).id, input);
+      res.status(201).json(note);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  app.put(api.notes.update.path, isAuthenticated, async (req, res) => {
+    const id = Number(req.params.id);
+    const existingNote = await storage.getNote(id);
+    
+    if (!existingNote || existingNote.userId !== (req.user as any).id) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    const input = api.notes.update.input.parse(req.body);
+    const updatedNote = await storage.updateNote(id, input);
+    res.json(updatedNote);
+  });
+
+  app.delete(api.notes.delete.path, isAuthenticated, async (req, res) => {
+    const id = Number(req.params.id);
+    const existingNote = await storage.getNote(id);
+    
+    if (!existingNote || existingNote.userId !== (req.user as any).id) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    await storage.deleteNote(id);
+    res.sendStatus(204);
+  });
+
+  // Seed Data
+  const existingUser = await storage.getUserByUsername("demo");
+  if (!existingUser) {
+    const hashedPassword = await hashPassword("demo123");
+    const user = await storage.createUser({ username: "demo", password: hashedPassword });
+    
+    await storage.createNote(user.id, {
+      title: "Welcome to Finote",
+      content: "This is a simple, minimalist note-taking app. You can pin notes, change their colors, and more!",
+      color: "blue",
+      isPinned: true,
+      tags: ["Welcome", "Finote"],
+    });
+    
+    await storage.createNote(user.id, {
+      title: "Project Ideas",
+      content: "1. Build a personal website\\n2. Learn Rust\\n3. Create a mobile app",
+      color: "green",
+      isPinned: false,
+      tags: ["Ideas", "Planning"],
+    });
+    
+    await storage.createNote(user.id, {
+      title: "Shopping List",
+      content: "- Milk\\n- Eggs\\n- Bread\\n- Coffee",
+      color: "yellow",
+      isPinned: false,
+      tags: ["Personal"],
+    });
+  }
+
+  return httpServer;
+}
+------------
+src/storage.ts
+
+import { users, notes, type User, type InsertUser, type Note, type InsertNote } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
+
+export interface IStorage {
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+
+  getNotes(userId: number): Promise<Note[]>;
+  getNote(id: number): Promise<Note | undefined>;
+  createNote(userId: number, note: InsertNote): Promise<Note>;
+  updateNote(id: number, note: Partial<InsertNote>): Promise<Note>;
+  deleteNote(id: number): Promise<void>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getNotes(userId: number): Promise<Note[]> {
+    return await db
+      .select()
+      .from(notes)
+      .where(eq(notes.userId, userId))
+      .orderBy(desc(notes.isPinned), desc(notes.createdAt));
+  }
+
+  async getNote(id: number): Promise<Note | undefined> {
+    const [note] = await db.select().from(notes).where(eq(notes.id, id));
+    return note;
+  }
+
+  async createNote(userId: number, insertNote: InsertNote): Promise<Note> {
+    const [note] = await db
+      .insert(notes)
+      .values({ ...insertNote, userId })
+      .returning();
+    return note;
+  }
+
+  async updateNote(id: number, updates: Partial<InsertNote>): Promise<Note> {
+    const [note] = await db
+      .update(notes)
+      .set(updates)
+      .where(eq(notes.id, id))
+      .returning();
+    return note;
+  }
+
+  async deleteNote(id: number): Promise<void> {
+    await db.delete(notes).where(eq(notes.id, id));
+  }
+}
+
+export const storage = new DatabaseStorage();
+---------------
+shared/routes.ts
+
+import { z } from 'zod';
+import { insertNoteSchema, insertUserSchema, notes, users } from './schema';
+
+export const errorSchemas = {
+  validation: z.object({
+    message: z.string(),
+    field: z.string().optional(),
+  }),
+  notFound: z.object({
+    message: z.string(),
+  }),
+  internal: z.object({
+    message: z.string(),
+  }),
+  unauthorized: z.object({
+    message: z.string(),
+  }),
+};
+
+export const api = {
+  auth: {
+    register: {
+      method: 'POST' as const,
+      path: '/api/register',
+      input: insertUserSchema,
+      responses: {
+        201: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    login: {
+      method: 'POST' as const,
+      path: '/api/login',
+      input: z.object({ username: z.string(), password: z.string() }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    logout: {
+      method: 'POST' as const,
+      path: '/api/logout',
+      responses: {
+        200: z.void(),
+      },
+    },
+    me: {
+      method: 'GET' as const,
+      path: '/api/user',
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  notes: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/notes',
+      responses: {
+        200: z.array(z.custom<typeof notes.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/notes',
+      input: insertNoteSchema,
+      responses: {
+        201: z.custom<typeof notes.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/notes/:id',
+      input: insertNoteSchema.partial(),
+      responses: {
+        200: z.custom<typeof notes.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/notes/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+};
+
+export function buildUrl(path: string, params?: Record<string, string | number>): string {
+  let url = path;
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (url.includes(`:${key}`)) {
+        url = url.replace(`:${key}`, String(value));
+      }
+    });
+  }
+  return url;
+}
+------------
+shared/schema.ts
+
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const notes = pgTable("notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isPinned: boolean("is_pinned").default(false),
+  color: text("color").default("default"),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+export const insertNoteSchema = createInsertSchema(notes).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Note = typeof notes.$inferSelect;
+export type InsertNote = z.infer<typeof insertNoteSchema>;
+
