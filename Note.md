@@ -69,7 +69,7 @@ docker run -d \
   -p 5432:5432 \
   postgres:16
 
-docker run -d --name finote-postgres --network finote-net -e POSTGRES_DB=finote -e POSTGRES_USER=finote_user -e POSTGRES_PASSWORD=finote_password -p 5432:5432 postgres:16
+docker run -d --name finote-postgres --restart=unless-stopped --network finote-net -e POSTGRES_DB=finote -e POSTGRES_USER=finote_user -e POSTGRES_PASSWORD=finote_password -p 5432:5432 postgres:16
 
 postgresql://finote_user:finote_password@finote-postgres:5432/finote
 
