@@ -1,0 +1,12 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY drizzle.config.ts ./
+COPY migrations ./migrations
+COPY src/shared ./src/shared
+
+CMD ["npx", "drizzle-kit", "migrate"]

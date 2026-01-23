@@ -1,0 +1,77 @@
+
+===========================================================
+Migration
+LOKAL
+- Ubah schema.ts
+- npx drizzle-kit generate
+- git commit & push
+
+VPS
+- git pull
+- docker build -f Dockerfile.migrate
+- docker run finote-migrate   <-- MIGRATION
+- docker build finote-backend
+- docker run finote-backend
+===========================================================
+
+ALUR
+
+LOKAL (Developer Machine)
+Digunakan saat: nambah / ubah table , nambah kolom, relasi baru
+ubah schema : // src/shared/schema.ts
+
+Generate migration (LOKAL)
+export DATABASE_URL=postgresql://finote_user:finote_password@localhost:5432/finote
+npx drizzle-kit generate
+
+akan terbentuk file migration
+migrations/
+├── 0001_create_users.sql
+├── 0002_add_notes.sql
+└── meta/_journal.json
+
+lalu commit dan push
+git add migrations drizzle.config.ts
+git commit -m "db: add notes table"
+git push origin main
+
+
+
+Ranah VPS/server
+pull/update
+git pull origin main
+
+cek postgresql : docker ps | grep finote-postgres
+jika belum jalankan script postgres
+
+Build migration image
+docker build -f Dockerfile.migrate -t finote-migrate .
+dan jalankan
+docker run --rm \
+  --network finote-net \
+  -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
+  finote-migrate
+
+build backend image
+docker build -t finote-backend .
+
+dan jalankan backend
+
+lalu coba verifikasi
+curl http://localhost:3000/healthz
+curl http://localhost:3000/readyz
+
+
+==================================
+
+UPDATE SCHEMA DI MASA DEPAN (TANPA DOWN TIME)
+
+dilokal
+npx drizzle-kit generate
+git push
+
+dan di vps
+git pull
+docker build -f Dockerfile.migrate -t finote-migrate .
+docker run --rm --network finote-net -e DATABASE_URL=... finote-migrate
+docker restart finote-backend

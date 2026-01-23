@@ -77,6 +77,12 @@ docker run backend
 ↓
 docker exec → drizzle migrate
 
+docker build -f Dockerfile.migrate -t finote-migrate .
+docker run --rm \
+  --network finote-net \
+  -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
+  finote-migrate
+
 ===========================================================
 Docker network
 
@@ -167,5 +173,3 @@ curl -i http://localhost:3000/readyz
 
 endpoint metrics /metrics untuk Prometheus scrape data metrics
 curl http://localhost:3000/metrics
-
-===========================================================
