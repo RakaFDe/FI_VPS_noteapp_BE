@@ -114,3 +114,51 @@ Testing metrics
 curl -i http://localhost:3000/healthz
 curl -i http://localhost:3000/readyz
 curl http://localhost:3000/metrics
+
+
+config
+
+server {
+    listen 80;
+    server_name apifinote.rakafitrap.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Penting untuk session, auth, dan WebSocket
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+---------------------------------------------------
+
+server {
+    server_name finote.rakafitrap.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:5173;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/finote.rakafitrap.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/finote.rakafitrap.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    listen 80;
+    server_name finote.rakafitrap.com;
+    return 301 https://$host$request_uri;
+}

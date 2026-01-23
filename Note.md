@@ -147,7 +147,7 @@ docker run -d \
   -e PORT=3000 \
   -e SESSION_SECRET=super-secret-production \
   -e SESSION_NAME=finote.sid \
-  -e CORS_ORIGIN=https://finote.domainmu.com \
+  -e CORS_ORIGIN=https://finote.rakafitrap.com \
   -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
   finote-backend
 
