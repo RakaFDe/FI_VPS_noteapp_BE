@@ -14,6 +14,7 @@ Schema dibuat lewat migration, bukan runtime.
 Environment Variable Minimal
 DATABASE_URL=postgresql://user:password@host:5432/finote
 
+npm install -D drizzle-kit
 =============================================
 1.Lokal – Fresh Start (Belum Ada Data)
 Digunakan saat: Baru clone repo dan Development pertama kali

@@ -20,6 +20,7 @@ npm install cors
 npm install -D @types/cors
 npm install bcrypt
 npm install -D @types/bcrypt
+npm install -D drizzle-kit
 
 ====================================================================
 ENVIRONMENT VARIABLE

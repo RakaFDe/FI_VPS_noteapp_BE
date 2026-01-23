@@ -13,12 +13,15 @@ npm install -D @types/cors
 npm install bcrypt
 npm install -D @types/bcrypt
 npm install prom-client
+npm install -D drizzle-kit
+
 
 atau
 
 npm install
 npm install cors bcrypt prom-client
 npm install -D typescript @types/cors @types/bcrypt
+npm install -D drizzle-kit
 
 ===========================================================
 Environment Variables
