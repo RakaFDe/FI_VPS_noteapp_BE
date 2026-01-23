@@ -142,6 +142,7 @@ Run Backend (PRODUCTION)
 docker run -d \
   --name finote-backend \
   --network finote-net \
+  --restart=unless-stopped\
   -p 3000:3000 \
   -e NODE_ENV=production \
   -e PORT=3000 \
