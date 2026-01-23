@@ -51,6 +51,19 @@ CORS_ORIGIN=https://frontend.domain
 DB_POOL_MAX=5
 ===========================================================
 
+Migrate
+
+Generate di lokal → commit → push → migrate di VPS
+
+import env (windows / linux)
+$env:DATABASE_URL="postgresql://finote_user:finote_password@localhost:5432/finote"
+export DATABASE_URL=postgresql://finote_user:finote_password@localhost:5432/finote
+jalanakan "npx drizzle-kit generate" di lokal , lalu push
+
+dan jalankan di vps/server
+export DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote
+npx drizzle-kit migrate
+===========================================================
 Docker network
 
 docker network create finote-net
