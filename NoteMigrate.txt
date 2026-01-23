@@ -35,7 +35,7 @@ git add migrations drizzle.config.ts
 git commit -m "db: add notes table"
 git push origin main
 
-
+-------------------------------
 
 Ranah VPS/server
 pull/update

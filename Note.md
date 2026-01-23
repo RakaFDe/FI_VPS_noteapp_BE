@@ -173,3 +173,7 @@ curl -i http://localhost:3000/readyz
 
 endpoint metrics /metrics untuk Prometheus scrape data metrics
 curl http://localhost:3000/metrics
+
+
+
+untuk conf nginx ada di Backendnote.txt
