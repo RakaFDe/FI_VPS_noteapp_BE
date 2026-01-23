@@ -63,6 +63,20 @@ jalanakan "npx drizzle-kit generate" di lokal , lalu push
 dan jalankan di vps/server
 export DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote
 npx drizzle-kit migrate
+
+Alur Migrate
+LOCAL:
+drizzle generate
+↓
+commit + push
+
+VPS:
+git pull
+↓
+docker run backend
+↓
+docker exec → drizzle migrate
+
 ===========================================================
 Docker network
 
@@ -154,29 +168,4 @@ curl -i http://localhost:3000/readyz
 endpoint metrics /metrics untuk Prometheus scrape data metrics
 curl http://localhost:3000/metrics
 
-
-
-
 ===========================================================
-============================ERROR==========================
-===========================================================
-
-Passport Error – Penting
-Error: Unknown authentication strategy "local"
-
-Artinya
-passport.authenticate("local") dipanggil
-tetapi LocalStrategy belum didaftarkan
-
-Solusi
-Di src/passport.ts:
-import { Strategy as LocalStrategy } from "passport-local";
-
-passport.use(
-  new LocalStrategy(async (username, password, done) => {
-    // logic auth
-  })
-);
-
-dan pastikan di load
-import "./passport.js"; // di src/index.ts

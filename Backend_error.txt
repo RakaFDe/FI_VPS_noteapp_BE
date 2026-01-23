@@ -1,0 +1,37 @@
+===========================================================
+============================ERROR==========================
+===========================================================
+
+Passport Error – Penting
+Error: Unknown authentication strategy "local"
+
+Artinya
+passport.authenticate("local") dipanggil
+tetapi LocalStrategy belum didaftarkan
+
+Solusi
+Di src/passport.ts:
+import { Strategy as LocalStrategy } from "passport-local";
+
+passport.use(
+  new LocalStrategy(async (username, password, done) => {
+    // logic auth
+  })
+);
+
+dan pastikan di load
+import "./passport.js"; // di src/index.ts
+
+
+===========================================================
+
+Error migrate/drizzle
+
+npx drizzle-kit migrate No config path provided, using default 'drizzle.config.ts'
+[⣷] applying migrations...Error: getaddrinfo EAI_AGAIN finote-postgres at /home/finote/backend/node_modules/pg-pool/index.js:45:11
+errno: -3001, code: 'EAI_AGAIN', syscall: 'getaddrinfo', hostname: 'finote-postgres'
+
+Artinya : getaddrinfo EAI_AGAIN finote-postgres
+Node.js tidak bisa resolve hostname finote-postgres
+Artinya host tersebut tidak dikenal di environment ini
+finote-postgres hanya valid DI DALAM DOCKER NETWORK (jalanklan migrate pada container backend)
