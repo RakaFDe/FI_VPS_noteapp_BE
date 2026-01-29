@@ -21,7 +21,7 @@ router.post(
       "local",
       (
         err: unknown,
-        user: Express.User | false,
+        user: any,
         info?: { message?: string } | string
       ) => {
         if (err) {

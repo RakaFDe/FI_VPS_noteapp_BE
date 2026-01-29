@@ -42,8 +42,9 @@ npm install -D @types/cors
 npm install bcrypt
 npm install -D @types/bcrypt
 npm install prom-client
-
-
+npm install eslint --save-dev
+npm install -D @typescript-eslint/parser @typescript-eslint/eslint-plugin
+npm install -D globals
 ====================
 docker network create finote-net
 
