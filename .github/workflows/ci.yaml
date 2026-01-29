@@ -11,7 +11,6 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/finote-backend
   REGISTRY: ghcr.io
   OWNER: rakafde
 
@@ -49,6 +48,11 @@ jobs:
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set image name (lowercase)
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME=ghcr.io/${REPO_LOWER}/finote-backend" >> $GITHUB_ENV
 
       - name: Set image tags
         run: |
