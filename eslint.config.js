@@ -36,5 +36,16 @@ export default [
         }
       ]
     }
+  },
+
+  // ADD THIS SECTION BELOW FOR YOUR TESTS
+  {
+    files: ["src/tests/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+        ...globals.node
+      }
+    }
   }
 ];
