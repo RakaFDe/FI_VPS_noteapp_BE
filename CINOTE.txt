@@ -1,0 +1,28 @@
+
+Ideal Flow (Tanpa CI Migration Dulu)
+
+CI (GitHub Actions)
+  - build finote-backend image
+  - build finote-migrate image
+  - push keduanya ke registry
+
+Lalu di VPS / OPS:
+docker pull finote-migrate:<version>
+docker run --rm finote-migrate:<version>
+docker pull finote-backend:<version>
+docker run finote-backend:<version>
+
+
+Migration lifecycle:
+
+1. Developer ubah schema
+2. Generate migration
+3. Commit migration file
+4. CI build image migrate
+5. Operator jalankan migration image
+
+❗ Migration ≠ Build
+❗ Migration ≠ CI
+❗ Migration = Operational Step
+---
+untuk migrate dijalankan pada CD

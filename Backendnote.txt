@@ -162,3 +162,16 @@ server {
     server_name finote.rakafitrap.com;
     return 301 https://$host$request_uri;
 }
+=====================================================================
+
+Step/Flow
+
+Step 1
+Checkout code
+Install dependency
+Lint
+Build
+Read VERSION
+Read git short SHA
+Build Docker image
+Push image ke registry

@@ -1,0 +1,60 @@
+name: CI - Build & Push Backend Image
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+env:
+  IMAGE_NAME: finote-backend
+  REGISTRY: ghcr.io
+  OWNER: rakafde
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Read VERSION
+        id: version
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Set short SHA
+        run: echo "SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build & Push Docker Image
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION} .
+            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-${SHA} .
+            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:latest .
+            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}
+            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-${SHA}
+            docker push $REGISTRY/$OWNER/$IMAGE_NAME:latest
+          else
+            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:dev .
+            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-dev-${SHA} .
+            docker push $REGISTRY/$OWNER/$IMAGE_NAME:dev
+            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-dev-${SHA}
+          fi
