@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: finote-backend
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/finote-backend
   REGISTRY: ghcr.io
   OWNER: rakafde
 
@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build
         run: npm run build
 
@@ -47,18 +50,28 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build & Push Docker Image
+      - name: Set image tags
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION} .
-            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-${SHA} .
-            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:latest .
-            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}
-            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-${SHA}
-            docker push $REGISTRY/$OWNER/$IMAGE_NAME:latest
+          VERSION=$(cat VERSION)
+          SHORT_SHA=${GITHUB_SHA::7}
+
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:latest" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
           else
-            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:dev .
-            docker build -t $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-dev-${SHA} .
-            docker push $REGISTRY/$OWNER/$IMAGE_NAME:dev
-            docker push $REGISTRY/$OWNER/$IMAGE_NAME:${VERSION}-dev-${SHA}
+            echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:dev" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
           fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.IMAGE_TAGS }}
+
+
