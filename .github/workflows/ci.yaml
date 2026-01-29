@@ -6,6 +6,10 @@ on:
       - main
       - dev
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   IMAGE_NAME: finote-backend
   REGISTRY: ghcr.io
