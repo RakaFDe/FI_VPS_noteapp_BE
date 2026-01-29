@@ -22,6 +22,7 @@ npm install
 npm install cors bcrypt prom-client
 npm install -D typescript @types/cors @types/bcrypt
 npm install -D drizzle-kit
+npm install -D jest ts-jest supertest @types/jest
 
 ===========================================================
 Environment Variables
@@ -175,6 +176,14 @@ curl -i http://localhost:3000/readyz
 endpoint metrics /metrics untuk Prometheus scrape data metrics
 curl http://localhost:3000/metrics
 
+
+===========================================================
+testing
+
+install dep
+npm install -D jest ts-jest supertest @types/jest
+lalu inisialisasi jest config (muncul jest.config.js)
+npx ts-jest config:init
 
 
 untuk conf nginx ada di Backendnote.txt

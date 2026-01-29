@@ -45,6 +45,13 @@ npm install prom-client
 npm install eslint --save-dev
 npm install -D @typescript-eslint/parser @typescript-eslint/eslint-plugin
 npm install -D globals
+
+npm install -D jest ts-jest supertest @types/jest
+npm install -D @types/supertest
+npm install -D @types/jest
+npm install -D @types/jest @types/supertest
+npm install -D cross-env
+
 ====================
 docker network create finote-net
 
