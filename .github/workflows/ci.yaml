@@ -84,6 +84,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
           vuln-type: library
+          pkg-types: npm
 
 
       # 3. Push the validated image
