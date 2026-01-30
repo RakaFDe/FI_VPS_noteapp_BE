@@ -71,7 +71,9 @@ jobs:
         with:
           context: .
           load: true
+          no-cache: true # <--- THIS IS THE KEY
           tags: ${{ env.IMAGE_NAME }}:tmp
+          # Temporarily remove cache-from/cache-to if they exist here
           
 
       # 2. Scan image with Trivy (Image Mode)

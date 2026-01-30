@@ -56,6 +56,12 @@
   "overrides": {
     "cross-spawn": "^7.0.6",
     "tar": "^7.5.7",
-    "glob": "^13.0.0"
+    "glob": "^13.0.0",
+    "test-exclude": {
+      "glob": "^13.0.0"
+    },
+    "@jest/reporters": {
+       "glob": "^13.0.0"
+    }
   }
 }
