@@ -63,21 +63,27 @@ jobs:
           echo "IMAGE_NAME=ghcr.io/${REPO_LOWER}/finote-backend" >> $GITHUB_ENV
 
       - name: Set image tags
-        id: tags
         run: |
           VERSION=$(cat VERSION)
 
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "tags=${IMAGE_NAME}:latest,${IMAGE_NAME}:${VERSION},${IMAGE_NAME}:${VERSION}-${SHA}" >> $GITHUB_OUTPUT
+            echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:latest" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-${SHA}" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
           else
-            echo "tags=${IMAGE_NAME}:dev,${IMAGE_NAME}:${VERSION}-dev-${SHA}" >> $GITHUB_OUTPUT
+            echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:dev" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-dev-${SHA}" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
           fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ env.IMAGE_TAGS }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
