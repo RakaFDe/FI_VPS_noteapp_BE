@@ -27,12 +27,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy package files
+COPY package*.json ./
+# Explicitly copy VERSION to ensure any version change breaks the cache
+COPY VERSION ./
+
+# Use --no-audit to speed up and ensure a fresh install
+# Use --omit=dev as you were doing
+RUN npm ci --omit=dev && npm cache clean --force
+
 # Copy build output
 COPY --from=build /app/dist ./dist
 COPY package*.json ./
-
-# Install production deps only
-RUN npm ci --omit=dev
 
 EXPOSE 3000
 
