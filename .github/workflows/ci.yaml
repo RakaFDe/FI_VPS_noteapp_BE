@@ -65,20 +65,27 @@ jobs:
       - name: Set image tags
         run: |
           VERSION=$(cat VERSION)
-          SHORT_SHA=${GITHUB_SHA::7}
 
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
             echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
             echo "${IMAGE_NAME}:latest" >> $GITHUB_ENV
             echo "${IMAGE_NAME}:${VERSION}" >> $GITHUB_ENV
-            echo "${IMAGE_NAME}:${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-${SHA}" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
           else
             echo "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
             echo "${IMAGE_NAME}:dev" >> $GITHUB_ENV
-            echo "${IMAGE_NAME}:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_ENV
+            echo "${IMAGE_NAME}:${VERSION}-dev-${SHA}" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
           fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.IMAGE_TAGS }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@0.20.0
@@ -88,18 +95,12 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+            scanners: vuln
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: ${{ env.IMAGE_TAGS }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          image: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.SHA }}
+
 
 
