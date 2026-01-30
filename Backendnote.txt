@@ -51,7 +51,7 @@ npm install -D @types/supertest
 npm install -D @types/jest
 npm install -D @types/jest @types/supertest
 npm install -D cross-env
-
+npm install cross-spawn@latest glob@latest tar@latest
 ====================
 docker network create finote-net
 
