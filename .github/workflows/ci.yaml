@@ -12,7 +12,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  OWNER: rakafde
 
 jobs:
   build:
@@ -38,63 +37,67 @@ jobs:
           DATABASE_URL: postgres://dummy:dummy@localhost:5432/dummy
         run: npm run test
 
-      - name: Lint
-        run: npm run lint
+      - name: Set Environment Variables
+        run: |
+          VERSION=$(cat VERSION)
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=${GITHUB_SHA::7}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "IMAGE_NAME=ghcr.io/${REPO_LOWER}/finote-backend" >> $GITHUB_ENV
+
+      - name: Set image tags
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            TAGS="${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${{ env.VERSION }},${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.SHA }}"
+          else
+            TAGS="${{ env.IMAGE_NAME }}:dev,${{ env.IMAGE_NAME }}:${{ env.VERSION }}-dev-${{ env.SHA }}"
+          fi
+          echo "IMAGE_TAGS=$TAGS" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build
-        run: npm run build
-
-      - name: Read VERSION
-        id: version
-        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-
-      - name: Set short SHA
-        run: echo "SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
       - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image name (lowercase)
-        run: |
-          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_NAME=ghcr.io/${REPO_LOWER}/finote-backend" >> $GITHUB_ENV
-
-      - name: Set image tags
-        id: tags
-        run: |
-          VERSION=$(cat VERSION)
-
-          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "tags=${IMAGE_NAME}:latest,${IMAGE_NAME}:${VERSION},${IMAGE_NAME}:${VERSION}-${SHA}" >> $GITHUB_OUTPUT
-          else
-            echo "tags=${IMAGE_NAME}:dev,${IMAGE_NAME}:${VERSION}-dev-${SHA}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build and push Docker image
+      # 1. Build & Load (locally) so Trivy can scan it before pushing
+      - name: Build and load for scanning
         uses: docker/build-push-action@v5
         with:
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          context: .
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:tmp
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
+      # 2. Scan image with Trivy
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.SHA }}
-          format: table
-          exit-code: 1
+          image-ref: ${{ env.IMAGE_NAME }}:tmp
+          format: 'table'
+          exit-code: '1' # Fails the build if vulnerabilities are found
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          scanners: vuln
+          severity: 'CRITICAL,HIGH'
 
+      # 3. Push the validated image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_TAGS }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 4. Generate SBOM
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.SHA }}
-
-
-
+          image: ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          artifact-name: sbom.spdx.json
+          output-format: spdx-json
