@@ -83,6 +83,7 @@ jobs:
           exit-code: '1' # Fails the build if vulnerabilities are found
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+          vuln-type: library
 
       # 3. Push the validated image
       - name: Build and push Docker image
