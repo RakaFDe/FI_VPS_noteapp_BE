@@ -75,16 +75,16 @@ jobs:
           cache-from: type=gha
 
       # 2. Scan image with Trivy
-      - name: Scan image with Trivy
+      - name: Scan dependencies with Trivy (fs mode)
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:tmp
-          format: table
+          scan-type: fs
+          scan-ref: .
+          vuln-type: library
+          severity: CRITICAL,HIGH
           exit-code: 1
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          vuln-type: library
-          pkg-types: npm
+
 
 
       # 3. Push the validated image
