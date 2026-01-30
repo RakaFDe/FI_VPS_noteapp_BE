@@ -79,11 +79,12 @@ jobs:
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:tmp
-          format: 'table'
-          exit-code: '1' # Fails the build if vulnerabilities are found
+          format: table
+          exit-code: 1
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          severity: CRITICAL,HIGH
           vuln-type: library
+
 
       # 3. Push the validated image
       - name: Build and push Docker image
