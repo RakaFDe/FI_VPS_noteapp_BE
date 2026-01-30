@@ -72,7 +72,7 @@ jobs:
           context: .
           load: true
           tags: ${{ env.IMAGE_NAME }}:tmp
-          cache-from: type=gha
+          
 
       # 2. Scan image with Trivy (Image Mode)
       - name: Scan image with Trivy
