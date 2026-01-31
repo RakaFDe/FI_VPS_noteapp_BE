@@ -5,17 +5,12 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
 RUN npm ci
 
-# Copy tsconfig
 COPY tsconfig*.json ./
-
-# Copy source code (TERMUK MASUK src/shared)
 COPY src ./src
 
-# Build TypeScript
 RUN npm run build
 
 # ==========================
@@ -26,19 +21,18 @@ FROM node:20-alpine
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--enable-source-maps
 
-# Copy package files
 COPY package*.json ./
-# Explicitly copy VERSION to ensure any version change breaks the cache
 COPY VERSION ./
 
-# Use --no-audit to speed up and ensure a fresh install
-# Use --omit=dev as you were doing
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy build output
 COPY --from=build /app/dist ./dist
-COPY package*.json ./
+
+# Create non-root user
+RUN addgroup -S app && adduser -S app -G app
+USER app
 
 EXPOSE 3000
 
