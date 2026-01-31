@@ -20,10 +20,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NODE_OPTIONS=--enable-source-maps
 
+COPY package*.json ./
 COPY VERSION ./
 
-# Copy only what we need
-COPY --from=build /app/node_modules ./node_modules
+# Install ONLY prod deps
+RUN npm ci --omit=dev && npm cache clean --force
+
 COPY --from=build /app/dist ./dist
 
 RUN addgroup -S app && adduser -S app -G app
