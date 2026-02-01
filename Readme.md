@@ -1,4 +1,4 @@
-Dokumentasi Alur Database Finote
+# Dokumentasi Alur Database Finote
 (PostgreSQL + Drizzle ORM)
 
 Konsep Dasar (Wajib Dipahami)
@@ -41,12 +41,12 @@ Endpoint	Fungsi	Dipakai oleh
 /metrics	Metrics Prometheus	Monitoring & Alert
 
 =============================================
-1.Lokal – Fresh Start (Belum Ada Data)
+# 1.Lokal – Fresh Start (Belum Ada Data)
 Digunakan saat: Baru clone repo dan Development pertama kali
 
 langkah
 setup postgresql
-# 1. Jalankan PostgreSQL
+1. Jalankan PostgreSQL
 docker run -d \
   --name finote-postgres \
   -e POSTGRES_DB=finote \
@@ -55,36 +55,36 @@ docker run -d \
   -p 5432:5432 \
   postgres:16
 
-# 2. Set env
+2. Set env
 linux
 jalankan :export DATABASE_URL=postgresql://finote_user:finote_password@localhost:5432/finote
 
 windows
 jalankan : $env:DATABASE_URL="postgresql://finote_user:finote_password@localhost:5432/finote"
 
-# 3. Buat table dari schema
+3. Buat table dari schema
 npx drizzle-kit push
 
-# 4. Jalankan backend
+4. Jalankan backend
 npm run dev
 
 Database kosong, Table otomatis dibuat, Siap development
 ================================================
-2.Lokal – Sudah Ada Data Sebelumnya
+# 2.Lokal – Sudah Ada Data Sebelumnya
 Digunakan saat: Restart laptop , Container mati tapi volume masih ada
 
-# 1. Jalankan PostgreSQL (pakai volume lama)
+1. Jalankan PostgreSQL (pakai volume lama)
 docker start finote-postgres
 
-# 2. Jalankan backend
+2. Jalankan backend
 npm run dev
 
 TIDAK perlu drizzle-kit push ulang dan Data tetap aman
 ================================================
-3.VPS – Fresh Start (Tanpa Data)
+# 3.VPS – Fresh Start (Tanpa Data)
 Digunakan saat: Deploy pertama kali ke VPS dan Production baru
 
-# 1. Jalankan PostgreSQL di VPS
+1. Jalankan PostgreSQL di VPS
 docker run -d \
   --name finote-postgres \
   --network finote-net \
@@ -94,13 +94,13 @@ docker run -d \
   -v finote_pgdata:/var/lib/postgresql/data \
   postgres:16
 
-# 2. Set env VPS
+2. Set env VPS
 export DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote
 
-# 3. Buat table
+3. Buat table
 npx drizzle-kit migrate
 
-# 4. Jalankan backend container
+4. Jalankan backend container
 docker run -d \
   --network finote-net \
   -e DATABASE_URL=... \
@@ -110,7 +110,7 @@ Production clean, Schema konsisten, Aman
 
 ================================================
 
-4.VPS Fresh Start + Ambil Data dari Lokal
+# 4.VPS Fresh Start + Ambil Data dari Lokal
 Digunakan saat: Migrasi dari lokal ke production dan Data mau ikut
 
 backup dari lokal
@@ -123,7 +123,7 @@ jalankan migration bila perlu
 npx drizzle-kit migrate
 ===============================================
 
-5.VPS – Pernah Ada, Mau Fresh Start Total
+# 5.VPS – Pernah Ada, Mau Fresh Start Total
 Reset production dan Data lama ingin dibuang
 
 
@@ -145,15 +145,15 @@ SEMUA DATA HILANG
 6.VPS – Data Lama Dipakai Terus
 Digunakan saat: Update backend dan Tambah fitur
 
-# 1. Update schema.ts
+1. Update schema.ts
 
-# 2. Generate migration
+2. Generate migration
 npx drizzle-kit generate
 
-# 3. Jalankan migration
+3. Jalankan migration
 npx drizzle-kit migrate
 
-# 4. Redeploy backend
+4. Redeploy backend
 docker restart finote-backend
 
 Data lama aman , Schema ter-update ,Zero downtime (bisa)
@@ -176,7 +176,7 @@ WHERE table_name = 'users';
 
 ===========================================
 
-Best Practice (Disarankan)
+# Best Practice (Disarankan)
 
 ❌ Jangan push di production
 ✅ Gunakan generate + migrate
@@ -193,7 +193,7 @@ Best Practice (Disarankan)
 | Reset total   | drop DB             |
 | Update schema | migrate             |
 ==========================================================
-CICD
+# CICD
 
 CI – Build & Test (GitHub Actions / GitLab CI)
 Pull Request / Push main
@@ -252,7 +252,7 @@ npx drizzle-kit migrate
 
 
 ==============================================
-test cepat DB + BACKEND
+# test cepat DB + BACKEND
 
 postman
 regist post
