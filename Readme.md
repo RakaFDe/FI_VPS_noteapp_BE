@@ -69,6 +69,7 @@ npx drizzle-kit push
 npm run dev
 
 Database kosong, Table otomatis dibuat, Siap development
+
 ================================================
 # 2.Lokal – Sudah Ada Data Sebelumnya
 Digunakan saat: Restart laptop , Container mati tapi volume masih ada
@@ -80,6 +81,7 @@ docker start finote-postgres
 npm run dev
 
 TIDAK perlu drizzle-kit push ulang dan Data tetap aman
+
 ================================================
 # 3.VPS – Fresh Start (Tanpa Data)
 Digunakan saat: Deploy pertama kali ke VPS dan Production baru
@@ -121,6 +123,7 @@ psql finote < finote_backup.sql
 
 jalankan migration bila perlu
 npx drizzle-kit migrate
+
 ===============================================
 
 # 5.VPS – Pernah Ada, Mau Fresh Start Total
@@ -140,9 +143,10 @@ docker run postgres...
 npx drizzle-kit migrate
 
 SEMUA DATA HILANG
+
 ==========================================
 
-6.VPS – Data Lama Dipakai Terus
+# 6.VPS – Data Lama Dipakai Terus
 Digunakan saat: Update backend dan Tambah fitur
 
 1. Update schema.ts
@@ -161,6 +165,7 @@ Data lama aman , Schema ter-update ,Zero downtime (bisa)
 jika ada perubahan shared/schema.ts
 npx drizzle-kit generate
 npx drizzle-kit migrate
+
 ===========================================
 
 jika sudah coba cek 
@@ -243,6 +248,7 @@ docker run -d \
   --name finote-frontend \
   -p 80:80 \
   finote-frontend
+  
 =========================================================
 
 linux
