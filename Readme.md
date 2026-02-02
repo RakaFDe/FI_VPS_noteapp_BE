@@ -197,6 +197,7 @@ WHERE table_name = 'users';
 | Pindah data   | `pg_dump` + restore |
 | Reset total   | drop DB             |
 | Update schema | migrate             |
+
 ==========================================================
 # CICD
 

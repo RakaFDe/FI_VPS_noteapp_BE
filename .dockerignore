@@ -7,3 +7,4 @@ dist
 Dockerfile
 npm-debug.log
 README.md
+coverage
