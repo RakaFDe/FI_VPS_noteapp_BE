@@ -85,8 +85,12 @@ jobs:
         with:
           load: true
           tags: ${{ env.IMAGE_NAME }}:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
+
+      - name: Debug node_modules inside image
+        run: |
+          docker run --rm ${{ env.IMAGE_NAME }}:ci \
+            npm ls glob cross-spawn tar || true
 
       # ------------------------
       # SECURITY SCAN
