@@ -121,12 +121,17 @@ docker build -t finote-backend .
 atau
 docker build -t finote-backend ./backend
 
+jika dengan arg(dev atau prod)
+docker build -t myapp:dev --build-arg APP_ENV=dev .
+docker build -t myapp:prod --build-arg APP_ENV=prod .
+
 ===========================================================
 
 Run backend (development)
 
 docker run -d \
   --name finote-backend \
+  --restart unless-stopped \
   --network finote-net \
   -p 3000:3000 \
   -e NODE_ENV=development \
@@ -135,7 +140,7 @@ docker run -d \
   -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote \
   finote-backend
 
-docker run -d --name finote-backend --network finote-net -p 3000:3000 -e NODE_ENV=development -e PORT=3000 -e SESSION_SECRET=dev-secret -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote finote-backend
+docker run -d --name finote-backend --restart unless-stopped --network finote-net -p 3000:3000 -e NODE_ENV=development -e PORT=3000 -e SESSION_SECRET=dev-secret -e DATABASE_URL=postgresql://finote_user:finote_password@finote-postgres:5432/finote finote-backend
 
 
 Run Backend (PRODUCTION)
