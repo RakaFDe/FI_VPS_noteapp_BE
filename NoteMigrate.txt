@@ -68,6 +68,9 @@ UPDATE SCHEMA DI MASA DEPAN (TANPA DOWN TIME)
 
 dilokal
 npx drizzle-kit generate
+lalu exec ke container postgresql
+INSERT INTO users (username, password)
+VALUES ('fi', 'secret123');
 git push
 
 dan di vps

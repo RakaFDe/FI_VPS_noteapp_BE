@@ -19,3 +19,4 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export default router;
+console.log("NODE_ENV =", process.env.NODE_ENV);

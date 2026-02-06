@@ -66,6 +66,7 @@ jalankan : $env:DATABASE_URL="postgresql://finote_user:finote_password@localhost
 
 3. Buat table dari schema
 npx drizzle-kit push
+dan insert data user untuk testing
 
 4. Jalankan backend
 npm run dev
